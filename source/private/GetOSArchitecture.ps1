@@ -19,8 +19,8 @@ function GetOSArchitecture {
         switch ($Architecture) {
             "Arm" { "arm(?!64)" }
             "Arm64" { "arm64" }
-            "X86" { "x86|386|32" }
-            "X64" { "amd64|x64|x86_64|64" }
+            "X86" { "x86|386" }
+            "X64" { "amd64|x64|x86_64" }
         }
     } else {
         $Architecture
