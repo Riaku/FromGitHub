@@ -1,4 +1,4 @@
-function Get-OSPlatform {
+function GetOSPlatform {
     [CmdletBinding()]
     param(
         [switch]$Pattern

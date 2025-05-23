@@ -15,19 +15,27 @@ function Test-FileHash {
         # The path to the file to check the hash of
         [string]$Target,
 
-        # The hash(es) or checksum(s) to compare to (can be one or more files, or one or more hash strings)
+        # The hash(es) or checksum(s) to compare to (can be one or more urls, files, or hash strings)
         [string[]]$Checksum
     )
+    $basename = [Regex]::Escape([IO.Path]::GetFileName($Target))
 
-    # If Checksum is a file, get the checksum from the file
-    if (Test-Path $Checksum) {
-        $basename = [Regex]::Escape([IO.Path]::GetFileName($Target))
-        Write-Debug "Checksum is a file, getting checksum for $basename from $checksum"
-        $Checksum = (Select-String -LiteralPath $Checksum -Pattern $basename).Line -split "\s+|=" -notmatch $basename
-    }
+    # Supports checksum files with an ARRAY of valid checksums (for different hash algorithms)
+    $Checksum = @(
+        foreach($check in $Checksum) {
+            # If Checksum is a URL, fetch the checksum(s) from the URL
+            if ($Check -match "https?://") {
+                Write-Debug "Checksum is a URL: $Check"
+                Invoke-RestMethod $Check
+            } elseif (Test-Path $Check) {
+                Write-Debug "Checksum is a file: $Check"
+                Get-Content $Check
+            }
+        }
+    ) -match $basename -split "\s+|=" -notmatch $basename
 
     $Actual = (Get-FileHash -LiteralPath $Target -Algorithm SHA256).Hash
-    # Supports checksum files with an ARRAY of valid checksums (for different hash algorithms)
+
     # ... by searching the array for any matching hash (an accidental pass is almost inconceivable).
     [bool]($Checksum -eq $Actual)
     if ($Checksum -eq $Actual) {

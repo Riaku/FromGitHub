@@ -1,4 +1,4 @@
-function Get-OSArchitecture {
+function GetOSArchitecture {
     [CmdletBinding()]
     param(
         [switch]$Pattern
@@ -15,14 +15,14 @@ function Get-OSArchitecture {
     }
     # Optionally, turn this into a regex pattern that usually works
     if ($Pattern) {
-        Write-Information $arch
-        switch ($arch) {
+        Write-Information $Architecture
+        switch ($Architecture) {
             "Arm" { "arm(?!64)" }
             "Arm64" { "arm64" }
-            "X86" { "x86|386" }
-            "X64" { "amd64|x64|x86_64" }
+            "X86" { "x86|386|32" }
+            "X64" { "amd64|x64|x86_64|64" }
         }
     } else {
-        $arch
+        $Architecture
     }
 }

@@ -17,39 +17,25 @@ param(
     [switch]$Clean,
 
     # Collect code coverage when tests are run
-    [switch]$CollectCoverage<# ,
-
-    # Which projects to build
-    [Alias("Projects")]
-    $dotnetProjects = @(),
-
-    # Which projects are test projects
-    [Alias("TestProjects")]
-    $dotnetTestProjects = @(),
-
-    # Further options to pass to dotnet
-    [Alias("Options")]
-    $dotnetOptions = @{
-        "-verbosity" = "minimal"
-        # "-runtime" = "linux-x64"
-    }
-    #>
+    [switch]$CollectCoverage
 )
 $InformationPreference = "Continue"
 $ErrorView = 'DetailedView'
 
-# The name of the module to publish
+# The name of the module to build and publish
 $script:PSModuleName = "FromGitHub"
+$script:RequiredCodeCoverage = 0.15 # I'm just starting to write tests
 
 # Use Env because Earthly can override it
 $Env:OUTPUT_ROOT ??= Join-Path $BuildRoot Modules
 
-$Tasks = "Tasks", "../Tasks", "../../Tasks" | Convert-Path -ErrorAction Ignore | Select-Object -First 1
-Write-Information "$($PSStyle.Foreground.BrightCyan)Found shared tasks in $Tasks" -Tag "InvokeBuild"
+$SharedTasks = "../Tasks", "../../Tasks" | Convert-Path -ErrorAction Ignore | Select-Object -First 1
+Write-Information "$($PSStyle.Foreground.BrightCyan)Found shared tasks in $SharedTasks" -Tag "InvokeBuild"
+
 ## Self-contained build script - can be invoked directly or via Invoke-Build
 if ($MyInvocation.ScriptName -notlike '*Invoke-Build.ps1') {
-    & "$Tasks/_Bootstrap.ps1"
-
+    & "$SharedTasks/_Bootstrap.ps1"
+    Write-Host Build $MyInvocation.ScriptName -ForegroundColor Green
     Invoke-Build -File $MyInvocation.MyCommand.Path @PSBoundParameters -Result Result
 
     if ($Result.Error) {
@@ -59,12 +45,5 @@ if ($MyInvocation.ScriptName -notlike '*Invoke-Build.ps1') {
     exit 0
 }
 
-## The first task defined is the default task. Put the right values for your project type here...
-if ($dotnetProjects -and $Clean) {
-    Add-BuildTask CleanBuild Clean, ($Task ?? "Test")
-} elseif ($Clean) {
-    Add-BuildTask CleanBuild Clean, ($Task ?? "Test")
-}
-
 ## Initialize the build variables, and import shared tasks, including DotNet tasks
-. "$Tasks/_Initialize.ps1"
+. "$SharedTasks/_Initialize.ps1"
