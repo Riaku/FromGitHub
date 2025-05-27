@@ -4,31 +4,52 @@ function SelectAssetByPlatform {
     param(
         $Assets,
 
-        # A regex pattern to selecting the right asset for this OS
+        # A regex pattern to select the right asset for this OS
         [string]$OS,
 
-        # A regex patter to select the right asset for this architecture
+        # A regex pattern to select the right asset for this architecture
         [string]$Architecture
     )
-    # Order the list of available asses in this order of preference (basically, choose an archive over an installer)
+    # Higher is better.
+    # Sort the available assets in order of preference to choose an archive over an installer
+    # If the extension is not in this list, we don't know how to handle it (for now)
+    # TODO: Support for linux packages (deb, rpm, apk, etc)
+    # TODO: Support for better archives (7z, etc)
     $extension = ".zip", ".tgz", ".tar.gz", ".exe"
-    $MatchedAssets = $assets.where{ $_.name -match $OS -and $_.name -match $Architecture } |
+    $AllAssets = $assets |
         # I need both the Extension and the Priority on the final object for the logic below
         # I'll put the extension on, and then use that to calculate the priority
         # It would be faster (but ugly) to use a single Select-Object, but compared to downloading and unzipping, that's irrelevant
         Select-Object *, @{ Name = "Extension"; Expr = { $_.name -replace '^[^.]+$', '' -replace ".*?((?:\.tar)?\.[^.]+$)", '$1' } } |
-        Select-Object *, @{ Name = "Priority"; Expr = { if (($index = [array]::IndexOf($extension, $_.Extension)) -lt 0) { $index * -10 } else { $index } } } |
+        Select-Object *, @{ Name = "Priority"; Expr = {
+                if (!$_.Extension -and $OS -notmatch "windows" ) {
+                    99
+                } else {
+                    [array]::IndexOf($extension, $_.Extension)
+                }
+            }
+        } |
+        Where-Object { $_.Priority -ge 0 } |
         Sort-Object Priority, Name
 
+    Write-Verbose "Found $($AllAssets.Count) assets. Testing for $OS/$Architecture`n $($AllAssets| Format-Table name, b*url | Out-String)"
+
+    $MatchedAssets = $AllAssets.where{ $_.name -match $OS -and $_.name -match $Architecture }
     if ($MatchedAssets.Count -gt 1) {
-        if ($asset = $MatchedAssets.where({ $_.Extension -in $extension }, "First")) {
-            Write-Warning "Found multiple available downloads for $OS/$Architecture`n $($MatchedAssets| Format-Table name, Extension, b*url | Out-String)`nUsing $($asset.name)"
-            # If it's not windows, executables don't need an extesion
-        } elseif ($os -notmatch "windows" -and ($asset = $MatchedAssets.Where({ !$_.Extension }, "First", 0))) {
-            Write-Warning "Found multiple available downloads for $OS/$Architecture`n $($MatchedAssets| Format-Table name, Extension, b*url | Out-String)`nUsing $($asset.name)"
-        } else {
-            throw "Found multiple available downloads for $OS/$Architecture`n $($MatchedAssets| Format-Table name, Extension, b*url | Out-String)`nUnable to detect usable release."
+        # The patterns are expected to be | separated and in order of preference
+        :top foreach ($o in $OS -split '\|') {
+            foreach ($a in $Architecture -split '\|') {
+                # Now that we're looking in order of preference, we can just stop when we find a match
+                if ($MatchedAssets = $AllAssets.Where({ $_.name -match $o -and $_.name -match $a -and -not $_.Extension -or $_.E }, "First", 1)) {
+                    break top
+                } else {
+                    Write-Warning "No match for $o|$a"
+                }
+            }
         }
+    }
+    if ($MatchedAssets.Count -gt 1) {
+        throw "Found multiple available downloads for $OS/$Architecture`n $($MatchedAssets| Format-Table name, Extension, b*url | Out-String)`nUnable to detect usable release."
     } elseif ($MatchedAssets.Count -eq 0) {
         throw "No asset found for $OS/$Architecture`n $($Assets.name -join "`n")"
     } else {

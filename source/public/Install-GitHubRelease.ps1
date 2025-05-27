@@ -70,16 +70,19 @@ function Install-GitHubRelease {
 
         # A regex pattern to override selecting the right option from the assets on the release
         # The operating system is automatically detected, you do not need to pass this parameter
-        $OS,
+        [string]$OS,
 
         # A regex pattern to override selecting the right option from the assets on the release
         # The architecture is automatically detected, you do not need to pass this parameter
-        $Architecture,
+        [string]$Architecture,
 
         # The location to install to.
         # Defaults to $Env:LocalAppData\Programs\Tools on Windows, /usr/local/bin on Linux/MacOS
         # There's normally no reason to pass this parameter
-        [string]$BinDir
+        [string]$BinDir,
+
+        # Optionally, the file name for the executable (it will be renamed to this)
+        [string]$ExecutableName
     )
     process {
         # Really this should just be a default value, but GetOSPlatform is private because it's weird, ok?
@@ -142,7 +145,7 @@ function Install-GitHubRelease {
         # Make sure there's a place to put the binary on the PATH
         $BinDir = InitializeBinDir $BinDir -Force:$Force
 
-        Write-Verbose "Moving the exectuable(s) from $PackagePath to $BinDir"
+        Write-Verbose "Moving the executable(s) from $PackagePath to $BinDir"
         MoveExecutable -FromDir $PackagePath -ToDir $BinDir @PSBoundParameters
 
         Pop-Location

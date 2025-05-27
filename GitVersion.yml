@@ -9,13 +9,12 @@ minor-version-bump-message: 'semver:\s?(feature|minor)'
 patch-version-bump-message: 'semver:\s?(fix|patch)'
 no-bump-message: 'semver:\s?(none|skip)'
 commit-message-incrementing: Enabled
-next-version: 1.4.0
 
 branches:
   main:
     tag: "" # explicitly no tag for main builds
     regex: ^master$|^main$
-    increment: Minor
+    increment: Patch
     is-mainline: true
     tracks-release-branches: true
   hotfix:
