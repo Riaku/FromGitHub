@@ -10,6 +10,13 @@ function SelectAssetByPlatform {
         # A regex pattern to select the right asset for this architecture
         [string]$Architecture
     )
+    # On Linux, we should prefer musl if it's available because the system is probably musl based
+    $IsMusl = if ($IsLinux) {
+        [bool](Get-ChildItem /usr/lib/ -Filter '*musl*.so*' -Recurse -ErrorAction Ignore | Select-Object -First 1)
+    } else {
+        $false
+    }
+
     # Higher is better.
     # Sort the available assets in order of preference to choose an archive over an installer
     # If the extension is not in this list, we don't know how to handle it (for now)
@@ -23,35 +30,64 @@ function SelectAssetByPlatform {
         Select-Object *, @{ Name = "Extension"; Expr = { $_.name -replace '^[^.]+$', '' -replace ".*?((?:\.tar)?\.[^.]+$)", '$1' } } |
         Select-Object *, @{ Name = "Priority"; Expr = {
                 if (!$_.Extension -and $OS -notmatch "windows" ) {
-                    99
+                    if ($IsMusl) {
+                        if ($name -match "musl") {
+                            10
+                        } else {
+                            99
+                        }
+                    } else {
+                        if ($name -match "musl") {
+                            99
+                        } else {
+                            10
+                        }
+                    }
                 } else {
-                    [array]::IndexOf($extension, $_.Extension)
+                    $index = [array]::IndexOf($extension, $_.Extension)
+                    if ($IsMusl) {
+                        if ($name -match "musl") {
+                            $index
+                        } else {
+                            $index + 10
+                        }
+                    } else {
+                        if ($name -match "musl") {
+                            $index + 10
+                        } else {
+                            $index
+                        }
+                    }
                 }
             }
         } |
         Where-Object { $_.Priority -ge 0 } |
-        Sort-Object Priority, Name
+        Sort-Object Priority, { $_.Name.Length }, Name
 
     Write-Verbose "Found $($AllAssets.Count) assets. Testing for $OS/$Architecture`n $($AllAssets| Format-Table name, b*url | Out-String)"
 
     $MatchedAssets = $AllAssets.where{ $_.name -match $OS -and $_.name -match $Architecture }
+    Write-Verbose "Assets for $OS/$Architecture`n $($MatchedAssets| Format-Table name, Extension, b*url | Out-String)"
+
     if ($MatchedAssets.Count -gt 1) {
         # The patterns are expected to be | separated and in order of preference
         :top foreach ($o in $OS -split '\|') {
             foreach ($a in $Architecture -split '\|') {
                 # Now that we're looking in order of preference, we can just stop when we find a match
-                if ($MatchedAssets = $AllAssets.Where({ $_.name -match $o -and $_.name -match $a -and -not $_.Extension -or $_.E }, "First", 1)) {
+                if ($MatchedAssets = $AllAssets.Where({ $_.name -match $o -and $_.name -match $a -and ((-not $_.Extension -and $OS -notmatch "windows") -or $_.Extension -in $extension) }, "First", 1)) {
+                    Write-Verbose "Selected $($MatchedAssets.name) for $o|$a"
                     break top
                 } else {
-                    Write-Warning "No match for $o|$a"
+                    Write-Verbose "No match for $o|$a"
                 }
             }
         }
     }
+
     if ($MatchedAssets.Count -gt 1) {
-        throw "Found multiple available downloads for $OS/$Architecture`n $($MatchedAssets| Format-Table name, Extension, b*url | Out-String)`nUnable to detect usable release."
+        throw "Found multiple available downloads for $OS/$Architecture`n $($MatchedAssets| Format-Table name, Extension, b*url | Out-String)`nUnable to determine best release. Please specify -OS or -Architecture to narrow it down."
     } elseif ($MatchedAssets.Count -eq 0) {
-        throw "No asset found for $OS/$Architecture`n $($Assets.name -join "`n")"
+        throw "No asset found for $OS/$Architecture`n $($AllAssets.name -join "`n")"
     } else {
         $asset = $MatchedAssets[0]
     }
