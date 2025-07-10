@@ -1,4 +1,4 @@
-function Install-GitHubRelease {
+function Install-FromGitHub {
     <#
     .SYNOPSIS
         Install a binary from a github release.
@@ -46,6 +46,7 @@ function Install-GitHubRelease {
     .NOTES
         All these examples are (only) tested on Windows and WSL Ubuntu
     #>
+    [Alias("Install-GitHubRelease")]
     [CmdletBinding(SupportsShouldProcess)]
     param(
         # The user or organization that owns the repository

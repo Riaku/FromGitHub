@@ -45,5 +45,11 @@ if ($MyInvocation.ScriptName -notlike '*Invoke-Build.ps1') {
     exit 0
 }
 
+Add-BuildTask RenameScript -After PSModuleBuild {
+    $ScriptName = "Install-GitHubRelease.ps1"
+    Get-ChildItem -Path $Env:OUTPUT_ROOT -Filter "*.ps1" -Directory -ErrorAction Ignore
+    | Rename-Item -NewName $ScriptName
+}
+
 ## Initialize the build variables, and import shared tasks, including DotNet tasks
 . "$SharedTasks/_Initialize.ps1"
