@@ -47,6 +47,7 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = '
+        1.5.2 - Fix metadata problems in published module and script
         1.5.1 - Fix a bug in SelectAssetByPlatform not using the order of OS and Architecture to select the best match.
         1.5.0 - Convert to a module with a build that exports the script
         '

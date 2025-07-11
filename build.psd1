@@ -5,6 +5,6 @@
     OutputDirectory          = "../Modules"
     VersionedOutputDirectory = $true
     Generators               = @(
-        @{ Generator = "ConvertTo-Script"; Function = "Install-FromGitHub" }
+        @{ Generator = "ConvertTo-Script"; Function = "Install-FromGitHub"; GUID = '23addf96-d1d7-4f51-b97f-c4f0189263b6' }
     )
 }
