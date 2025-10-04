@@ -28,7 +28,8 @@ jobs:
         }
 
         irm -Uri "https://api.github.com/repos/Jaykul/FromGithub/releases/latest" -Headers $headers -ResponseHeadersVariable respheaders
-        $respheaders.'x-ratelimit-remaining'
+        Write-Host "Response headers`n-------------"
+        $respheaders
 
     - name: Check GitHub Token with explicit env var
       shell: pwsh
@@ -47,4 +48,5 @@ jobs:
         }
 
         irm -Uri "https://api.github.com/repos/Jaykul/FromGithub/releases/latest" -Headers $headers -ResponseHeadersVariable respheaders
-        $respheaders.'x-ratelimit-remaining'
+        Write-Host "Response headers`n-------------"
+        $respheaders
