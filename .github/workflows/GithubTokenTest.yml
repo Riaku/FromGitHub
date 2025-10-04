@@ -12,34 +12,23 @@ jobs:
     env:
       FORCE_COLOR: 1
     steps:
-    - name: Check GitHub Token without explicit env var
+    - name: Without GITHUB_TOKEN env var
       shell: pwsh
       continue-on-error: true
       run: |
-        if (-not "${{ secrets.GITHUB_TOKEN }}") {
-          Write-Host "GITHUB_TOKEN is not set"
-          exit 1
-        }
         $headers = @{
             Accept     = 'application/vnd.github.v3+json'
         }
-        if( $env:GITHUB_TOKEN ) {
-            $headers.Authorization = "bearer $($Env:GITHUB_TOKEN)"
-        }
 
-        irm -Uri "https://api.github.com/repos/Jaykul/FromGithub/releases/latest" -Headers $headers -ResponseHeadersVariable respheaders
-        Write-Host "Response headers`n-------------"
-        $respheaders
+        $null = irm -Uri "https://api.github.com/repos/Jaykul/FromGithub/releases/latest" -Headers $headers -ResponseHeadersVariable respheaders
+        Write-Host "Rate Limit Remaining: $($respheaders."X-RateLimit-Remaining")"
 
-    - name: Check GitHub Token with explicit env var
+
+    - name: With GITHUB_TOKEN env var
       shell: pwsh
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        if (-not $env:GITHUB_TOKEN) {
-          Write-Host "GITHUB_TOKEN is not set"
-          exit 1
-        }
         $headers = @{
             Accept     = 'application/vnd.github.v3+json'
         }
@@ -47,6 +36,5 @@ jobs:
             $headers.Authorization = "bearer $($Env:GITHUB_TOKEN)"
         }
 
-        irm -Uri "https://api.github.com/repos/Jaykul/FromGithub/releases/latest" -Headers $headers -ResponseHeadersVariable respheaders
-        Write-Host "Response headers`n-------------"
-        $respheaders
+        $null = irm -Uri "https://api.github.com/repos/Jaykul/FromGithub/releases/latest" -Headers $headers -ResponseHeadersVariable respheaders
+        Write-Host "Rate Limit Remaining: $($respheaders."X-RateLimit-Remaining")"
