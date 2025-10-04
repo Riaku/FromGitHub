@@ -1,0 +1,49 @@
+name: TokenTest
+
+on:
+  push: {}
+  pull_request:
+    branches: [ add-workflow_dispatch-ci-pipeline ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    steps:
+    - name: Check GitHub Token without explicit env var
+      shell: pwsh
+      run: |
+        if (-not ${{ secrets.GITHUB_TOKEN }}) {
+          Write-Host "GITHUB_TOKEN is not set"
+          exit 1
+        }
+        $headers = @{
+            Accept     = 'application/vnd.github.v3+json'
+        }
+        if( $env:GITHUB_TOKEN ) {
+            $headers.Authorization = "bearer $($Env:GITHUB_TOKEN)"
+        }
+
+        irm -Uri "https://api.github.com/repos/Jaykul/FromGithub/releases/latest" -Headers $headers -ResponseHeadersVariable respheaders
+        $respheaders.'x-ratelimit-remaining'
+
+    - name: Check GitHub Token with explicit env var
+      shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if (-not $env:GITHUB_TOKEN) {
+          Write-Host "GITHUB_TOKEN is not set"
+          exit 1
+        }
+        $headers = @{
+            Accept     = 'application/vnd.github.v3+json'
+        }
+        if( $env:GITHUB_TOKEN ) {
+            $headers.Authorization = "bearer $($Env:GITHUB_TOKEN)"
+        }
+
+        irm -Uri "https://api.github.com/repos/Jaykul/FromGithub/releases/latest" -Headers $headers -ResponseHeadersVariable respheaders
+        $respheaders.'x-ratelimit-remaining'
